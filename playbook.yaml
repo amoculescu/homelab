@@ -1,0 +1,5 @@
+- name: homelab testenv
+  tasks:
+    - name: print
+      ansible.builtin.debug:
+        msg: Hello World
