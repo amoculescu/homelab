@@ -2,17 +2,18 @@
 # For configuration options and examples, please see:
 # https://gethomepage.dev/configs/services/
 
-- My First Group:
-    - My First Service:
-        href: http://localhost/
-        description: Homepage is awesome
+- Internet:
+    - PiHole:
+        icon: pi-hole
+        href: http://raspilin/admin
+        description: PiHole admin panel
 
 - My Second Group:
     - My Second Service:
         href: http://localhost/
         description: Homepage is the best
 
-- My Third Group:
+- Entertainment:
     - My Third Service:
         href: http://localhost/
         description: Homepage is 😎
