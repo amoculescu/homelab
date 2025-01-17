@@ -1,7 +1,7 @@
 title: Andrei's Homepage
 description: My homepage
 startUrl: https://test.url
-background: images/background.jpg
+background: /images/background.jpg
 headerStyle: boxed
 hideVersion: true
 theme: dark

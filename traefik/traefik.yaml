@@ -1,0 +1,7 @@
+api:
+  insecure: true
+providers:
+  docker:
+    exposedByDefault: false
+    endpoint: "tcp://dockerproxy:2375"
+    network: "services"

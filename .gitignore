@@ -1,2 +1,6 @@
 .vagrant/**
-etc-*/**
+pihole/etc-*/**
+uptime_kuma/uptime-kuma-data/**
+.env
+**/*.swp
+**log**

@@ -1,0 +1,29 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/services/
+
+- Networking:
+    - PiHole:
+        icon: pi-hole
+        href: http://raspilin/admin
+        description: PiHole admin panel
+    - Traefic Dashboard:
+        icon: traefik
+        href: http://raspilin:8080/dashboard
+
+- Apps:
+    - Reactive Resume:
+        href: http://andreis-macbook-pro:3000
+        icon: reactive-resume
+        description: Resume builder
+
+- Monitoring:
+    - Grafana:
+        icon: grafana
+        href: http://raspilin:3002/
+        description: Grafana
+
+    - Kuma:
+        icon: uptime-kuma
+        href: http://raspilin:3001
+        description: Uptime monitoring
