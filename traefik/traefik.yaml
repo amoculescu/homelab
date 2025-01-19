@@ -1,4 +1,3 @@
-tracing: {}
 accessLog:
   addInternals: true
   format: json
@@ -12,14 +11,11 @@ accessLog:
         User-Agent: redact
         Authorization: drop
         Content-Type: keep
-serversTransport:
-  insecureSkipVerify: true
 log: 
   level: "DEBUG" 
 api:
   insecure: true
   dashboard: true
-  debug: true
 entryPoints:
   http:
     address: ":80"
