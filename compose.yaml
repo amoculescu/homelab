@@ -47,10 +47,10 @@ services:
       - ./homepage/config:/app/config
       - ./homepage/pictures:/app/public/images
     labels:
-      - traefik.enable=true
-      - traefik.http.services.homepage.loadbalancer.server.port=3000
-      - traefik.http.routers.homepage.entrypoints=http
-      - 'traefik.http.routers.homepage.rule=Host(`hp.moculescu.de`)'
+      - "traefik.enable=true"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+      - "traefik.http.routers.homepage.entrypoints=http"
+      - "traefik.http.routers.homepage.rule=Host(`hp.moculescu.de`)"
     restart: always
 
   pihole:
@@ -95,6 +95,25 @@ services:
       - traefik.http.routers.kuma.entrypoints=http
       - 'traefik.http.routers.kuma.rule=Host(`kuma.moculescu.de`)'
 
+  
+  nginx:
+    container_name: nginx
+    image: nginx:1-alpine
+    networks: 
+      - services
+      - public
+    environment:
+      - NGINX_PORT=3004
+    ports:
+      - "3004:3004"
+    restart: always
+      #labels:
+      #- "traefik.enable=true"
+      #- "traefik.http.services.wp.loadbalancer.server.port=3004"
+      #- "traefik.http.routers.wp.entrypoints=http"
+      #- "traefik.http.routers.wp.rule=Host(`wp.moculescu.de`)"
+      #- "traefik.http.routers.wp.service=wp"
+
 
   reverse-proxy:
     container_name: traefik
@@ -108,51 +127,57 @@ services:
     ports:
       - "80:80"
       - "8080:8080"
+      - "443:443"
+      - "4318:4318"
     volumes:
       - ./traefik/traefik.yaml:/traefik.yaml:ro
-      - ./traefik/access_log:/var/log/traefik/access.log
-
+      - ./traefik/access.log:/var/log/traefik/access.log
     restart: always
-
-
-  loki:
-    container_name: loki
-    image: grafana/loki:latest
-    ports:
-      - "3100:3100"
-    networks:
-      - loki-net
-    volumes:
-      - ./grafana/loki-config.yaml:/etc/loki/loki-config.yaml
-    restart: always
-
-  promtail:
-    container_name: promtail
-    image: grafana/promtail:latest
-    volumes:
-      - ./grafana/promtail-config.yaml:/etc/promtail/promtail-config.yaml
-    networks:
-      - loki-net
-    depends_on:
-      - loki
-    restart: always
-
-  grafana:
-    container_name: grafana
-    image: grafana/grafana:latest
-    env_file: .env
-    expose:
-      - "3002"
-    networks:
-      - loki-net
-      - services
-    depends_on:
-      - loki
-    volumes:
-      - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
     labels:
-      - traefik.enable=true
-      - traefik.http.services.grafana.loadbalancer.server.port=3002
-      - traefik.http.routers.grafana.entrypoints=http
-      - 'traefik.http.routers.grafana.rule=Host(`grafana.moculescu.de`)'
-    restart: always
+      - "traefik.enable=true"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+      - "traefik.http.routers.traefik.entrypoints=http"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.moculescu.de`)"
+
+
+        #loki:
+        #container_name: loki
+        #image: grafana/loki:latest
+        #ports:
+        #   - "3100:3100"
+        #networks:
+      #   - loki-net
+      #volumes:
+      #  - ./grafana/loki-config.yaml:/etc/loki/loki-config.yaml
+      #restart: always
+
+        #promtail:
+        #container_name: promtail
+        #image: grafana/promtail:latest
+        #volumes:
+        #- ./grafana/promtail-config.yaml:/etc/promtail/promtail-config.yaml
+        #networks:
+        # - loki-net
+        #depends_on:
+        # - loki
+        #restart: always
+
+        #grafana:
+        #container_name: grafana
+        #image: grafana/grafana:latest
+      #env_file: .env
+      #expose:
+      #  - "3002"
+      #networks:
+      #- loki-net
+        # - services
+        #depends_on:
+        #- loki
+        #volumes:
+        #- "./grafana/grafana.ini:/etc/grafana/grafana.ini"
+        #labels:
+        #- "traefik.enable=true"
+        #- "traefik.http.services.grafana.loadbalancer.server.port=3002"
+        #- "traefik.http.routers.grafana.entrypoints=http"
+        #- "traefik.http.routers.grafana.rule=Host(`grafana.moculescu.de`)"
+        #restart: always
