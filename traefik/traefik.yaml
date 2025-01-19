@@ -1,7 +1,27 @@
+tracing: {}
+accessLog:
+  addInternals: true 
+  filePath: = "/var/log/traefik/access.log"
+log:
+  level: "DEBUG" 
 api:
   insecure: true
+  dashboard: true
+  debug: true
 providers:
   docker:
     exposedByDefault: false
     endpoint: "tcp://dockerproxy:2375"
     network: "services"
+
+      #certificatesResolvers:
+      #cloudflare:
+      #acme:
+      #email: andrei.moculescu@proton.me
+      #storage: acme.json
+      #caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+      #dnsChallenge:
+      #provider: cloudflare
+      #resolvers:
+      #- "1.1.1.1:53"
+      # - "1.0.0.1:53"
