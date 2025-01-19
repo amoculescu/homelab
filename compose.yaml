@@ -2,15 +2,19 @@ networks:
   public:
     #driver: bridge
     external: true
+    name: public
   proxy:
     driver: bridge
     internal: true
+    name: proxy
   services:
     driver: bridge
     internal: true
+    name: services
   loki-net:
     driver: bridge
     internal: true
+    name: loki-net
 
 services:
   dockerproxy:
@@ -43,10 +47,10 @@ services:
       - ./homepage/config:/app/config
       - ./homepage/pictures:/app/public/images
     labels:
-      - traefik.enable=true
-      - traefik.http.services.homepage.loadbalancer.server.port=3000
-      - traefik.http.routers.homepage.entrypoints=http
-      - 'traefik.http.routers.homepage.rule=Host(`hp.moculescu.de`)'
+      - "traefik.enable=true"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+      - "traefik.http.routers.homepage.entrypoints=http"
+      - "traefik.http.routers.homepage.rule=Host(`hp.moculescu.de`)"
     restart: always
 
   pihole:
@@ -61,8 +65,9 @@ services:
     ports:
       - "53:53/tcp"
       - "53:53/udp"
-      - "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
-      - "8053:80/tcp"
+        #- "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
+    expose:
+      - "80"
     environment:
       TZ: 'Europe/Berlin'
     # Volumes store your data between container upgrades
@@ -73,7 +78,11 @@ services:
     #cap_add:
     #- NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
     restart: always
-      #command: sh -c "sudo pihole -a -p"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.pihole.loadbalancer.server.port=80"
+      - "traefik.http.routers.pihole.entrypoints=http"
+      - "traefik.http.routers.pihole.rule=Host(`pihole.moculescu.de`)"
 
   uptime-kuma:
     image: louislam/uptime-kuma:1
@@ -92,6 +101,21 @@ services:
       - traefik.http.routers.kuma.entrypoints=http
       - 'traefik.http.routers.kuma.rule=Host(`kuma.moculescu.de`)'
 
+  
+  nginx:
+    container_name: nginx
+    image: nginx:1-alpine
+    networks: 
+      - services
+    expose:
+      - "80"
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.wp.loadbalancer.server.port=80"
+      - "traefik.http.routers.wp.entrypoints=http"
+      - "traefik.http.routers.wp.rule=Host(`moculescu.de`)"
+
 
   reverse-proxy:
     container_name: traefik
@@ -99,26 +123,34 @@ services:
     depends_on:
       - dockerproxy
     networks:
-      proxy:
-      public:
-      services:
+      - proxy
+      - public
+      - services
     ports:
       - "80:80"
       - "8080:8080"
+      - "443:443"
     volumes:
       - ./traefik/traefik.yaml:/traefik.yaml:ro
+      - ./traefik/access.log:/var/log/traefik/access.log
     restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+      - "traefik.http.routers.traefik.entrypoints=http"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.moculescu.de`)"
 
 
   loki:
     container_name: loki
     image: grafana/loki:latest
     ports:
-      - "3100:3100"
+       - "3100:3100"
     networks:
-      - loki-net
+     - loki-net
     volumes:
       - ./grafana/loki-config.yaml:/etc/loki/loki-config.yaml
+    restart: always
 
   promtail:
     container_name: promtail
@@ -129,6 +161,7 @@ services:
       - loki-net
     depends_on:
       - loki
+    restart: always
 
   grafana:
     container_name: grafana
@@ -144,7 +177,8 @@ services:
     volumes:
       - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
     labels:
-      - traefik.enable=true
-      - traefik.http.services.grafana.loadbalancer.server.port=3002
-      - traefik.http.routers.grafana.entrypoints=http
-      - 'traefik.http.routers.grafana.rule=Host(`grafana.moculescu.de`)'
+      - "traefik.enable=true"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3002"
+      - "traefik.http.routers.grafana.entrypoints=http"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.moculescu.de`)"
+    restart: always
