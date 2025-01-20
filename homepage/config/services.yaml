@@ -27,3 +27,9 @@
         icon: uptime-kuma
         href: http://kuma.moculescu.de
         description: Uptime monitoring
+
+- Admin:
+  - Portainer:
+      icon: portainer
+      href: http://portainer.moculescu.de
+      description: portainer

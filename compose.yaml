@@ -203,3 +203,23 @@ services:
       - "traefik.http.routers.grafana.rule=Host(`grafana.moculescu.de`)"
       - "traefik.http.routers.grafana.tls=true"
     restart: always
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    depends_on:
+      - dockerproxy
+    command: -H tcp://dockerproxy:2375
+    networks:
+      - proxy
+    expose:
+      - 9000
+    volumes:
+      - ./portainer/data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      - "traefik.http.routers.portainer.entrypoints=https"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.moculescu.de`)"
+      - "traefik.http.routers.portainer.tls=true"
+    restart: always
