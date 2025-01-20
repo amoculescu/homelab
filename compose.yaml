@@ -29,7 +29,11 @@ services:
       - CONTAINERS=1
       - SERVICES=1 
       - TASKS=1
-      - POST=0
+      - POST=1
+      - IMAGES=1
+      - INFO=1
+      - NETWORKS=1
+      - VOLUMES=1
     ports: 
       - '2375:2375'
     volumes:
