@@ -108,20 +108,20 @@ services:
       - "traefik.http.routers.kuma.tls=true"
 
   
-        #nginx:
-        #  container_name: nginx
-        #  image: nginx:1-alpine
-        # networks: 
-        #   - services
-        #expose:
-        #  - "80"
-        #restart: always
-        #labels:
-        #  - "traefik.enable=true"
-        #  - "traefik.http.services.wp.loadbalancer.server.port=80"
-        # - "traefik.http.routers.wp.entrypoints=https"
-        # - "traefik.http.routers.wp.rule=Host(`moculescu.de`)"
-        # - "traefik.http.routers.wp.tls=true"
+  nginx:
+    container_name: nginx
+    image: nginx:1-alpine
+    networks: 
+      - services
+    expose:
+      - "80"
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.wp.loadbalancer.server.port=80"
+      - "traefik.http.routers.wp.entrypoints=https"
+      - "traefik.http.routers.wp.rule=Host(`moculescu.de`)"
+      - "traefik.http.routers.wp.tls=true"
 
 
   reverse-proxy:
