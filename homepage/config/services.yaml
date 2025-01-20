@@ -9,7 +9,7 @@
         description: PiHole admin panel
     - Traefic Dashboard:
         icon: traefik
-        href: http://raspilin:8080/dashboard
+        href: http://traefik.moculescu.de/dashboard
 
 - Apps:
     - Reactive Resume:
@@ -20,10 +20,10 @@
 - Monitoring:
     - Grafana:
         icon: grafana
-        href: http://raspilin:3002/
+        href: http://grafana.moculescu.de/
         description: Grafana
 
     - Kuma:
         icon: uptime-kuma
-        href: http://raspilin:3001
+        href: http://kuma.moculescu.de
         description: Uptime monitoring
