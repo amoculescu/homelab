@@ -1,6 +1,7 @@
 .vagrant/**
 pihole/etc-*/**
 uptime_kuma/uptime-kuma-data/**
+traefik/acme.json
 .env
 **/*.swp
 **log**
