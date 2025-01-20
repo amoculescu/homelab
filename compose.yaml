@@ -1,3 +1,6 @@
+secrets:
+  cf_api_token:
+    file: ./traefik/cf_api_token.txt
 networks:
   public:
     #driver: bridge
@@ -49,8 +52,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.homepage.loadbalancer.server.port=3000"
-      - "traefik.http.routers.homepage.entrypoints=http"
+      - "traefik.http.routers.homepage.entrypoints=https"
       - "traefik.http.routers.homepage.rule=Host(`hp.moculescu.de`)"
+      - "traefik.http.routers.homepage.tls=true"
     restart: always
 
   pihole:
@@ -63,8 +67,8 @@ services:
       - public
     # For DHCP it is recommended to remove these ports and instead add: network_mode: "host"
     ports:
-      - "53:53/tcp"
-      - "53:53/udp"
+      - "192.168.178.2:53:53/tcp"
+      - "192.168.178.2:53:53/udp"
         #- "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
     expose:
       - "80"
@@ -81,8 +85,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.pihole.loadbalancer.server.port=80"
-      - "traefik.http.routers.pihole.entrypoints=http"
+      - "traefik.http.routers.pihole.entrypoints=https"
       - "traefik.http.routers.pihole.rule=Host(`pihole.moculescu.de`)"
+      - "traefik.http.routers.pihole.tls=true"
 
   uptime-kuma:
     image: louislam/uptime-kuma:1
@@ -98,8 +103,9 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.services.kuma.loadbalancer.server.port=3001
-      - traefik.http.routers.kuma.entrypoints=http
+      - traefik.http.routers.kuma.entrypoints=https
       - 'traefik.http.routers.kuma.rule=Host(`kuma.moculescu.de`)'
+      - "traefik.http.routers.kuma.tls=true"
 
   
   nginx:
@@ -113,8 +119,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.wp.loadbalancer.server.port=80"
-      - "traefik.http.routers.wp.entrypoints=http"
+      - "traefik.http.routers.wp.entrypoints=https"
       - "traefik.http.routers.wp.rule=Host(`moculescu.de`)"
+      - "traefik.http.routers.wp.tls=true"
 
 
   reverse-proxy:
@@ -130,15 +137,28 @@ services:
       - "80:80"
       - "8080:8080"
       - "443:443"
+    environment:
+      CF_DNS_API_TOKEN_FILE: /run/secrets/cf_api_token
+    secrets:
+      - cf_api_token
     volumes:
       - ./traefik/traefik.yaml:/traefik.yaml:ro
       - ./traefik/access.log:/var/log/traefik/access.log
+      - ./traefik/acme.json:/acme.json
     restart: always
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.traefik.loadbalancer.server.port=8080"
       - "traefik.http.routers.traefik.entrypoints=http"
       - "traefik.http.routers.traefik.rule=Host(`traefik.moculescu.de`)"
+      - "traefik.http.routers.traefik.middlewares=traefik-https"
+      - "traefik.http.middlewares.traefik-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.traefik-secure.entrypoints=https"
+      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.moculescu.de`)"
+      - "traefik.http.routers.traefik-secure.tls=true"
+      - "traefik.http.routers.traefik-secure.tls.certresolver=cloudflare"
+      - "traefik.http.routers.traefik-secure.tls.domains[0].main=moculescu.de"
+      - "traefik.http.routers.traefik-secure.tls.domains[0].sans=*.moculescu.de"
 
 
   loki:
@@ -179,6 +199,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.grafana.loadbalancer.server.port=3002"
-      - "traefik.http.routers.grafana.entrypoints=http"
+      - "traefik.http.routers.grafana.entrypoints=https"
       - "traefik.http.routers.grafana.rule=Host(`grafana.moculescu.de`)"
+      - "traefik.http.routers.grafana.tls=true"
     restart: always

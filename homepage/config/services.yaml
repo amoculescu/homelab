@@ -5,7 +5,7 @@
 - Networking:
     - PiHole:
         icon: pi-hole
-        href: http://raspilin/admin
+        href: http://pihole.moculescu.de/admin
         description: PiHole admin panel
     - Traefic Dashboard:
         icon: traefik
