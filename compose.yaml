@@ -1,3 +1,6 @@
+secrets:
+  cf_api_token:
+    file: ./traefik/cf_api_token.txt
 networks:
   public:
     #driver: bridge
@@ -130,15 +133,26 @@ services:
       - "80:80"
       - "8080:8080"
       - "443:443"
+    environment:
+      CF_DNS_API_TOKEN_FILE: /run/secrets/cf_api_token
+    secrets:
+      - cf_api_token
     volumes:
       - ./traefik/traefik.yaml:/traefik.yaml:ro
       - ./traefik/access.log:/var/log/traefik/access.log
+      - ./traefik/acme.json:/acme.json
     restart: always
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.traefik.loadbalancer.server.port=8080"
       - "traefik.http.routers.traefik.entrypoints=http"
       - "traefik.http.routers.traefik.rule=Host(`traefik.moculescu.de`)"
+      - "traefik.http.routers.traefik-secure.entrypoints=https"
+      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.moculescu.de`)"
+      - "traefik.http.routers.traefik-secure.tls=true"
+      - "traefik.http.routers.traefik-secure.tls.certresolver=cloudflare"
+      - "traefik.http.routers.traefik-secure.tls.domains[0].main=moculescu.de"
+      - "traefik.http.routers.traefik-secure.tls.domains[0].sans=*.moculescu.de"
 
 
   loki:
