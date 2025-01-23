@@ -4,15 +4,30 @@
 
 - Developer:
     - Github:
-        - abbr: GH
+        - icon: github-light
           href: https://github.com/
+    - gitlab:
+        - icon: gitlab
+          href: https://gitlab.com/
 
 - Social:
     - Reddit:
-        - abbr: RE
-          href: https://reddit.com/
+        - icon: reddit
+          href: https://old.reddit.com/
 
 - Entertainment:
     - YouTube:
-        - abbr: YT
+        - icon: youtube
           href: https://youtube.com/
+    - Prime Video:
+        - icon: prime-video-light
+          href: https://www.amazon.de/gp/video/storefront
+    - netflix:
+        - icon: netflix
+          href: https://www.netflix.com
+    - twitch:
+        - icon: twitch
+          href: https://www.twitch.com
+    - crunchyroll:
+        - abbr: CR
+          href: https://www.crunchyroll.com
