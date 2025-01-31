@@ -2,6 +2,7 @@
 pihole/etc-*/**
 uptime_kuma/uptime-kuma-data/**
 traefik/acme.json
+traefik/cf_api_token.txt
 portainer/data/**
 .env
 **/*.swp

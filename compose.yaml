@@ -37,7 +37,7 @@ services:
     ports: 
       - '2375:2375'
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock:z
     restart: always
 
   homepage:
@@ -51,8 +51,8 @@ services:
       - PUID=1000 
       - PGID=1000
     volumes:
-      - ./homepage/config:/app/config
-      - ./homepage/pictures:/app/public/images
+      - ./homepage/config:/app/config:z
+      - ./homepage/pictures:/app/public/images:z
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.homepage.loadbalancer.server.port=3000"
@@ -61,46 +61,49 @@ services:
       - "traefik.http.routers.homepage.tls=true"
     restart: always
 
-  pihole:
-    container_name: pihole
-    image: pihole/pihole:latest
-    env_file: .env
-    networks:
-      - proxy
-      - services
-      - public
-    # For DHCP it is recommended to remove these ports and instead add: network_mode: "host"
-    ports:
-      - "192.168.178.2:53:53/tcp"
-      - "192.168.178.2:53:53/udp"
-        #- "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
-    expose:
-      - "80"
-    environment:
-      TZ: 'Europe/Berlin'
-    # Volumes store your data between container upgrades
-    volumes:
-      - './pihole/etc-pihole:/etc/pihole'
-      - './pihole/etc-dnsmasq.d:/etc/dnsmasq.d'
-    #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
-    #cap_add:
-    #- NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
-    restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.pihole.loadbalancer.server.port=80"
-      - "traefik.http.routers.pihole.entrypoints=https"
-      - "traefik.http.routers.pihole.rule=Host(`pihole.moculescu.de`)"
-      - "traefik.http.routers.pihole.tls=true"
+  # pihole:
+  #   container_name: pihole
+  #   image: pihole/pihole:latest
+  #   env_file: .env
+  #   networks:
+  #     - proxy
+  #     - services
+  #     - public
+  #   # For DHCP it is recommended to remove these ports and instead add: network_mode: "host"
+  #   ports:
+  #     - "192.168.178.2:53:53/tcp"
+  #     - "192.168.178.2:53:53/udp"
+  #       #- "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
+  #   expose:
+  #     - "80"
+  #   environment:
+  #     TZ: 'Europe/Berlin'
+  #   # Volumes store your data between container upgrades
+  #   volumes:
+  #     - './pihole/etc-pihole:/etc/pihole'
+  #     - './pihole/etc-dnsmasq.d:/etc/dnsmasq.d'
+  #   #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+  #   #cap_add:
+  #   #- NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
+  #   restart: always
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.services.pihole.loadbalancer.server.port=80"
+  #     - "traefik.http.routers.pihole.entrypoints=https"
+  #     - "traefik.http.routers.pihole.rule=Host(`pihole.moculescu.de`)"
+  #     - "traefik.http.routers.pihole.tls=true"
 
   uptime-kuma:
     image: louislam/uptime-kuma:1
     container_name: kuma
+    environment:
+      - PUID=1000 
+      - PGID=1000
     networks:
       - services
       - proxy
     volumes:
-      - ./uptime_kuma/uptime-kuma-data:/app/data
+      - ./uptime_kuma/uptime-kuma-data:/app/data:z
     expose:
       - 3001
     restart: always
@@ -115,6 +118,9 @@ services:
   nginx:
     container_name: nginx
     image: nginx:1-alpine
+    environment:
+      - PUID=1000 
+      - PGID=1000
     networks: 
       - services
     expose:
@@ -142,13 +148,15 @@ services:
       - "8080:8080"
       - "443:443"
     environment:
-      CF_DNS_API_TOKEN_FILE: /run/secrets/cf_api_token
+      - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_api_token
+      - PUID=1000 
+      - PGID=1000
     secrets:
       - cf_api_token
     volumes:
-      - ./traefik/traefik.yaml:/traefik.yaml:ro
-      - ./traefik/access.log:/var/log/traefik/access.log
-      - ./traefik/acme.json:/acme.json
+      - ./traefik/traefik.yaml:/traefik.yaml:z
+      - ./traefik/access.log:/var/log/traefik/access.log:z
+      - ./traefik/acme.json:/acme.json:z
     restart: always
     labels:
       - "traefik.enable=true"
@@ -168,19 +176,25 @@ services:
   loki:
     container_name: loki
     image: grafana/loki:latest
+    environment:
+      - PUID=1000 
+      - PGID=1000
     ports:
        - "3100:3100"
     networks:
      - loki-net
     volumes:
-      - ./grafana/loki-config.yaml:/etc/loki/loki-config.yaml
+      - ./grafana/loki-config.yaml:/etc/loki/loki-config.yaml:z
     restart: always
 
   promtail:
     container_name: promtail
     image: grafana/promtail:latest
+    environment:
+      - PUID=1000 
+      - PGID=1000
     volumes:
-      - ./grafana/promtail-config.yaml:/etc/promtail/promtail-config.yaml
+      - ./grafana/promtail-config.yaml:/etc/promtail/promtail-config.yaml:z
     networks:
       - loki-net
     depends_on:
@@ -190,6 +204,9 @@ services:
   grafana:
     container_name: grafana
     image: grafana/grafana:latest
+    environment:
+      - PUID=1000 
+      - PGID=1000
     env_file: .env
     expose:
       - "3002"
@@ -199,7 +216,7 @@ services:
     depends_on:
       - loki
     volumes:
-      - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
+      - "./grafana/grafana.ini:/etc/grafana/grafana.ini:z"
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.grafana.loadbalancer.server.port=3002"
@@ -211,6 +228,9 @@ services:
   portainer:
     image: portainer/portainer-ce:latest
     container_name: portainer
+    environment:
+      - PUID=1000 
+      - PGID=1000
     depends_on:
       - dockerproxy
     command: -H tcp://dockerproxy:2375
@@ -219,7 +239,7 @@ services:
     expose:
       - 9000
     volumes:
-      - ./portainer/data:/data
+      - ./portainer/data:/data:z
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"

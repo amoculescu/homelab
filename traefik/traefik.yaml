@@ -32,6 +32,9 @@ providers:
     exposedByDefault: false
     endpoint: "tcp://dockerproxy:2375"
     network: "services"
+  file:
+    filename: traefik.yaml
+    watch: true
 
 certificatesResolvers:
   cloudflare:
@@ -46,3 +49,71 @@ certificatesResolvers:
         resolvers:
           - "1.1.1.1:53"
           - "1.0.0.1:53"
+          
+## DYNAMIC CONFIGURATION
+http:
+  routers:
+    pve:
+      entryPoints:
+        - https
+      rule: "Host(`pve.moculescu.de`)"
+      middlewares:
+        - default-headers
+        # - https-redirectscheme
+      tls: {}
+      service: pve
+    pihole:
+      entryPoints:
+        - https
+      rule: "Host(`pihole.moculescu.de`)"
+      middlewares:
+        - default-headers
+        - https-redirectscheme
+        - pihole-redirect
+        - pihole-addprefix
+      tls: {}
+      service: pihole
+      
+  services:
+    pve:
+      loadbalancer:
+        servers:
+          - url: "https://192.168.178.4:8006"
+        passHostHeader: true
+        serversTransport: "pve"
+    pihole:
+      loadbalancer:
+        servers:
+          - url: "http://192.168.178.2:80"
+        passHostHeader: true
+        
+  middlewares:
+    pihole-addprefix:
+      addPrefix:
+        prefix: "/admin"
+    pihole-redirect:
+      redirectRegex:
+        regex: "/admin/$"
+    https-redirectscheme:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+    default-headers:
+      headers:
+        frameDeny: true
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 15552000
+        customFrameOptionsValue: SAMEORIGIN
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+          
+  serversTransports:
+    pve:
+      insecureSkipVerify:
+        true
