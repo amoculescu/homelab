@@ -1,12 +1,6 @@
 secrets:
   cf_api_token:
     file: ./traefik/cf_api_token.txt
-  woodpecker_secrets:
-    file: ./woodpecker/secrets.txt
-  woodpecker_client:
-    file: ./woodpecker/client.txt
-  gitea_db_password:
-    file: ./gitea/db_password.txt
 networks:
   public:
     external: true
@@ -23,10 +17,10 @@ networks:
     driver: bridge
     internal: true
     name: loki-net
-  gitea:
+  gittea:
     driver: bridge
     internal: true
-    name: gitea
+    name: gittea
   teamcity:
     driver: bridge
     internal: true
@@ -230,11 +224,9 @@ services:
       - "traefik.http.routers.portainer.tls=true"
     restart: always
 
-  gitea:
+  gittea:
     image: docker.io/gitea/gitea:1.23.1
     container_name: gitea
-    secrets:
-      - gitea_db_password
     environment:
       - USER_UID=1001
       - USER_GID=1001
@@ -242,11 +234,11 @@ services:
       - GITEA__database__HOST=db:5432
       - GITEA__database__NAME=gitea
       - GITEA__database__USER=gitea
-      - GITEA__database__PASSWD__FILE=gitea_db_password
+      - GITEA__database__PASSWD=gitea
     restart: always
     networks:
       - services
-      - gitea
+      - gittea
       - public
     volumes:
       - ./gitea/data:/data:z
@@ -261,55 +253,58 @@ services:
       - db
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.gitea.loadbalancer.server.port=3000"
-      - "traefik.http.routers.gitea.entrypoints=https"
-      - "traefik.http.routers.gitea.rule=Host(`git.moculescu.de`)"
-      - "traefik.http.routers.gitea.tls=true"
+      - "traefik.http.services.gittea.loadbalancer.server.port=3000"
+      - "traefik.http.routers.gittea.entrypoints=https"
+      - "traefik.http.routers.gittea.rule=Host(`git.moculescu.de`)"
+      - "traefik.http.routers.gittea.tls=true"
 
   db:
     image: docker.io/library/postgres:14
-    container_name: gitea-db
     restart: always
-    secrets:
-      - gitea_db_password
     environment:
       - POSTGRES_USER=gitea
-      - POSTGRES_PASSWORD_FILE=/run/secrets/gitea_db_password
+      - POSTGRES_PASSWORD=gitea
       - POSTGRES_DB=gitea
     networks:
-      - gitea
+      - gittea
     volumes:
       - ./postgres/data:/var/lib/postgresql/data:z
-  
-  woodpecker-server:
-    image: woodpeckerci/woodpecker-server:latest
-    container_name: woodpecker
+
+  teamcity:
+    image: jetbrains/teamcity-server:latest
     expose:
-      - "8000"
-    secrets:
-      - woodpecker_secrets
-      - woodpecker_client
+      - "8111"
     volumes:
-      - ./woodpecker:/var/lib/woodpecker/:z
+      - ./teamcity/data_dir:/data/teamcity_server/datadir:z
+      - ./teamcity/teamcity-server-logs:/opt/teamcity/logs:z
+      - /home/git/.ssh
+    depends_on:
+      - teamcity-db
     networks:
-      - gitea
       - services
-    environment:
-      - WOODPECKER_OPEN=true
-      - WOODPECKER_HOST=https://ci.moculescu.de
-      - WOODPECKER_LOG_FILE=stdout
-      - WOODPECKER_LOG_LEVEL=debug
-      - WOODPECKER_BACKEND_DOCKER_NETWORK=gitea
-      - WOODPECKER_GITEA=true
-      - WOODPECKER_GITEA_URL=https://git.moculescu.de
-      - WOODPECKER_GITEA_CLIENT_FILE=/run/secrets/woodpecker_client
-      - WOODPECKER_GITEA_SECRET_FILE=/run/secrets/woodpecker_secrets
+      - teamcity
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.ci.loadbalancer.server.port=8000"
-      - "traefik.http.routers.ci.entrypoints=https"
-      - "traefik.http.routers.ci.rule=Host(`ci.moculescu.de`)"
-      - "traefik.http.routers.ci.tls=true"
+      - "traefik.http.services.teamcity.loadbalancer.server.port=8111"
+      - "traefik.http.routers.teamcity.entrypoints=https"
+      - "traefik.http.routers.teamcity.rule=Host(`ci.moculescu.de`)"
+      - "traefik.http.routers.teamcity.tls=true"
+    restart: always
+
+  teamcity-db:
+    image: postgres:latest
+    container_name: teamcity-db
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=teamcity_password
+      - POSTGRES_USER=teamcity_user
+      - POSTGRES_DB=teamcity_db
+    networks:
+      - teamcity
+    expose:
+      - "5432"
+    volumes:
+      - ./teamcity/data:/var/lib/postgresql/data:z
 
 #   nextcloud-aio-mastercontainer:
 #     image: nextcloud/all-in-one:latest

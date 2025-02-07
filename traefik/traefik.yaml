@@ -1,16 +1,16 @@
-accessLog:
-  addInternals: true
-  format: json
-  fields:
-    defaultMode: keep
-    names:
-      ClientUsername: drop
-    headers:
-      defaultMode: keep
-      names:
-        User-Agent: redact
-        Authorization: drop
-        Content-Type: keep
+#accessLog:
+#  addInternals: true
+#  format: json
+#  fields:
+#    defaultMode: keep
+#    names:
+#      ClientUsername: drop
+#    headers:
+#      defaultMode: keep
+#      names:
+#        User-Agent: redact
+#        Authorization: drop
+#        Content-Type: keep
 log: 
   level: "ERROR" 
 api:
