@@ -2,6 +2,8 @@
 pihole/etc-*/**
 gitea/**
 teamcity/**
+git/**
+woodpecker/**
 uptime_kuma/uptime-kuma-data/**
 traefik/acme.json
 traefik/cf_api_token.txt
