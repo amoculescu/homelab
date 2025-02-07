@@ -3,7 +3,6 @@ secrets:
     file: ./traefik/cf_api_token.txt
 networks:
   public:
-    #driver: bridge
     external: true
     name: public
   proxy:
@@ -18,6 +17,14 @@ networks:
     driver: bridge
     internal: true
     name: loki-net
+  gittea:
+    driver: bridge
+    internal: true
+    name: gittea
+  teamcity:
+    driver: bridge
+    internal: true
+    name: teamcity
 
 services:
   dockerproxy:
@@ -61,38 +68,6 @@ services:
       - "traefik.http.routers.homepage.tls=true"
     restart: always
 
-  # pihole:
-  #   container_name: pihole
-  #   image: pihole/pihole:latest
-  #   env_file: .env
-  #   networks:
-  #     - proxy
-  #     - services
-  #     - public
-  #   # For DHCP it is recommended to remove these ports and instead add: network_mode: "host"
-  #   ports:
-  #     - "192.168.178.2:53:53/tcp"
-  #     - "192.168.178.2:53:53/udp"
-  #       #- "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
-  #   expose:
-  #     - "80"
-  #   environment:
-  #     TZ: 'Europe/Berlin'
-  #   # Volumes store your data between container upgrades
-  #   volumes:
-  #     - './pihole/etc-pihole:/etc/pihole'
-  #     - './pihole/etc-dnsmasq.d:/etc/dnsmasq.d'
-  #   #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
-  #   #cap_add:
-  #   #- NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
-  #   restart: always
-  #   labels:
-  #     - "traefik.enable=true"
-  #     - "traefik.http.services.pihole.loadbalancer.server.port=80"
-  #     - "traefik.http.routers.pihole.entrypoints=https"
-  #     - "traefik.http.routers.pihole.rule=Host(`pihole.moculescu.de`)"
-  #     - "traefik.http.routers.pihole.tls=true"
-
   uptime-kuma:
     image: louislam/uptime-kuma:1
     container_name: kuma
@@ -100,6 +75,7 @@ services:
       - PUID=1000 
       - PGID=1000
     networks:
+      - public
       - services
       - proxy
     volumes:
@@ -247,3 +223,137 @@ services:
       - "traefik.http.routers.portainer.rule=Host(`portainer.moculescu.de`)"
       - "traefik.http.routers.portainer.tls=true"
     restart: always
+
+  gittea:
+    image: docker.io/gitea/gitea:1.23.1
+    container_name: gitea
+    environment:
+      - USER_UID=1001
+      - USER_GID=1001
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=db:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=gitea
+    restart: always
+    networks:
+      - services
+      - gittea
+      - public
+    volumes:
+      - ./gitea/data:/data:z
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /home/git/.ssh/:/data/git/.ssh:z
+    expose:
+      - "3000"
+    ports:
+      - "127.0.0.1:2222:22"
+    depends_on:
+      - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.gittea.loadbalancer.server.port=3000"
+      - "traefik.http.routers.gittea.entrypoints=https"
+      - "traefik.http.routers.gittea.rule=Host(`git.moculescu.de`)"
+      - "traefik.http.routers.gittea.tls=true"
+
+  db:
+    image: docker.io/library/postgres:14
+    restart: always
+    environment:
+      - POSTGRES_USER=gitea
+      - POSTGRES_PASSWORD=gitea
+      - POSTGRES_DB=gitea
+    networks:
+      - gittea
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data:z
+
+  teamcity:
+    image: jetbrains/teamcity-server:latest
+    expose:
+      - "8111"
+    volumes:
+      - ./teamcity/data_dir:/data/teamcity_server/datadir:z
+      - ./teamcity/teamcity-server-logs:/opt/teamcity/logs:z
+      - /home/git/.ssh
+    depends_on:
+      - teamcity-db
+    networks:
+      - services
+      - teamcity
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.teamcity.loadbalancer.server.port=8111"
+      - "traefik.http.routers.teamcity.entrypoints=https"
+      - "traefik.http.routers.teamcity.rule=Host(`ci.moculescu.de`)"
+      - "traefik.http.routers.teamcity.tls=true"
+    restart: always
+
+  teamcity-db:
+    image: postgres:latest
+    container_name: teamcity-db
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=teamcity_password
+      - POSTGRES_USER=teamcity_user
+      - POSTGRES_DB=teamcity_db
+    networks:
+      - teamcity
+    expose:
+      - "5432"
+    volumes:
+      - ./teamcity/data:/var/lib/postgresql/data:z
+
+#   nextcloud-aio-mastercontainer:
+#     image: nextcloud/all-in-one:latest
+#     #init: true
+#     restart: always
+#     container_name: nextcloud-aio-mastercontainer # This line is not allowed to be changed as otherwise AIO will not work correctly
+#     volumes:
+#       - nextcloud_aio_mastercontainer:/mnt/docker-aio-config:z # This line is not allowed to be changed as otherwise the built-in backup solution will not work
+#       # - /var/run/docker.sock:/var/run/docker.sock:ro # May be changed on macOS, Windows or docker rootless. See the applicable documentation. If adjusting, don't forget to also set 'WATCHTOWER_DOCKER_SOCKET_PATH'!
+#     networks: 
+#       - proxy
+#     ports:
+#       - 8080:8080
+#     expose:
+#       - 11000   
+#     environment: # Is needed when using any of the options below
+#       # AIO_DISABLE_BACKUP_SECTION: false # Setting this to true allows to hide the backup section in the AIO interface. See https://github.com/nextcloud/all-in-one#how-to-disable-the-backup-section
+#       # AIO_COMMUNITY_CONTAINERS: # With this variable, you can add community containers very easily. See https://github.com/nextcloud/all-in-one/tree/main/community-containers#community-containers
+#       APACHE_PORT: 11000 # Is needed when running behind a web server or reverse proxy (like Apache, Nginx, Caddy, Cloudflare Tunnel and else). See https://github.com/nextcloud/all-in-one/blob/main/reverse-proxy.md
+#       # APACHE_IP_BINDING: 127.0.0.1 # Should be set when running behind a web server or reverse proxy (like Apache, Nginx, Caddy, Cloudflare Tunnel and else) that is running on the same host. See https://github.com/nextcloud/all-in-one/blob/main/reverse-proxy.md
+#       APACHE_ADDITIONAL_NETWORK: services # (Optional) Connect the apache container to an additional docker network. Needed when behind a web server or reverse proxy (like Apache, Nginx, Caddy, Cloudflare Tunnel and else) running in a different docker network on same server. See https://github.com/nextcloud/all-in-one/blob/main/reverse-proxy.md
+#       # BORG_RETENTION_POLICY: --keep-within=7d --keep-weekly=4 --keep-monthly=6 # Allows to adjust borgs retention policy. See https://github.com/nextcloud/all-in-one#how-to-adjust-borgs-retention-policy
+#       # COLLABORA_SECCOMP_DISABLED: false # Setting this to true allows to disable Collabora's Seccomp feature. See https://github.com/nextcloud/all-in-one#how-to-disable-collaboras-seccomp-feature
+#       # NEXTCLOUD_DATADIR: /mnt/ncdata # Allows to set the host directory for Nextcloud's datadir. ⚠️⚠️⚠️ Warning: do not set or adjust this value after the initial Nextcloud installation is done! See https://github.com/nextcloud/all-in-one#how-to-change-the-default-location-of-nextclouds-datadir
+#       # NEXTCLOUD_MOUNT: /mnt/ # Allows the Nextcloud container to access the chosen directory on the host. See https://github.com/nextcloud/all-in-one#how-to-allow-the-nextcloud-container-to-access-directories-on-the-host
+#       # NEXTCLOUD_UPLOAD_LIMIT: 16G # Can be adjusted if you need more. See https://github.com/nextcloud/all-in-one#how-to-adjust-the-upload-limit-for-nextcloud
+#       # NEXTCLOUD_MAX_TIME: 3600 # Can be adjusted if you need more. See https://github.com/nextcloud/all-in-one#how-to-adjust-the-max-execution-time-for-nextcloud
+#       # NEXTCLOUD_MEMORY_LIMIT: 512M # Can be adjusted if you need more. See https://github.com/nextcloud/all-in-one#how-to-adjust-the-php-memory-limit-for-nextcloud
+#       # NEXTCLOUD_TRUSTED_CACERTS_DIR: /path/to/my/cacerts # CA certificates in this directory will be trusted by the OS of the nextcloud container (Useful e.g. for LDAPS) See https://github.com/nextcloud/all-in-one#how-to-trust-user-defined-certification-authorities-ca
+#       # NEXTCLOUD_STARTUP_APPS: deck twofactor_totp tasks calendar contacts notes # Allows to modify the Nextcloud apps that are installed on starting AIO the first time. See https://github.com/nextcloud/all-in-one#how-to-change-the-nextcloud-apps-that-are-installed-on-the-first-startup
+#       # NEXTCLOUD_ADDITIONAL_APKS: imagemagick # This allows to add additional packages to the Nextcloud container permanently. Default is imagemagick but can be overwritten by modifying this value. See https://github.com/nextcloud/all-in-one#how-to-add-os-packages-permanently-to-the-nextcloud-container
+#       # NEXTCLOUD_ADDITIONAL_PHP_EXTENSIONS: imagick # This allows to add additional php extensions to the Nextcloud container permanently. Default is imagick but can be overwritten by modifying this value. See https://github.com/nextcloud/all-in-one#how-to-add-php-extensions-permanently-to-the-nextcloud-container
+#       # NEXTCLOUD_ENABLE_DRI_DEVICE: true # This allows to enable the /dev/dri device for containers that profit from it. ⚠️⚠️⚠️ Warning: this only works if the '/dev/dri' device is present on the host! If it should not exist on your host, don't set this to true as otherwise the Nextcloud container will fail to start! See https://github.com/nextcloud/all-in-one#how-to-enable-hardware-acceleration-for-nextcloud
+#       # NEXTCLOUD_ENABLE_NVIDIA_GPU: true # This allows to enable the NVIDIA runtime and GPU access for containers that profit from it. ⚠️⚠️⚠️ Warning: this only works if an NVIDIA gpu is installed on the server. See https://github.com/nextcloud/all-in-one#how-to-enable-hardware-acceleration-for-nextcloud.
+#       # NEXTCLOUD_KEEP_DISABLED_APPS: false # Setting this to true will keep Nextcloud apps that are disabled in the AIO interface and not uninstall them if they should be installed. See https://github.com/nextcloud/all-in-one#how-to-keep-disabled-apps
+#       # SKIP_DOMAIN_VALIDATION: false # This should only be set to true if things are correctly configured. See https://github.com/nextcloud/all-in-one?tab=readme-ov-file#how-to-skip-the-domain-validation
+#       # TALK_PORT: 3478 # This allows to adjust the port that the talk container is using which is exposed on the host. See https://github.com/nextcloud/all-in-one#how-to-adjust-the-talk-port
+#       WATCHTOWER_DOCKER_SOCKET_PATH: tcp://dockerproxy:2375 # Needs to be specified if the docker socket on the host is not located in the default '/var/run/docker.sock'. Otherwise mastercontainer updates will fail. For macos it needs to be '/var/run/docker.sock'
+#     security_opt: ["label:disable"] # Is needed when using SELinux
+#     labels:
+#       - "traefik.enable=true"
+#       - "traefik.http.services.nextcloud.loadbalancer.server.port=11000"
+#       - "traefik.http.routers.nextcloud.entrypoints=https"
+#       - "traefik.http.routers.nextcloud.rule=Host(`drive.moculescu.de`)"
+#       - "traefik.http.routers.nextcloud.tls=true"
+
+# #   # Hint: You need to uncomment APACHE_PORT: 11000 above, adjust cloud.example.com to your domain and uncomment the necessary docker volumes at the bottom of this file in order to make it work
+# #   # You can find further examples here: https://github.com/nextcloud/all-in-one/discussions/588
+
+# volumes: # If you want to store the data on a different drive, see https://github.com/nextcloud/all-in-one#how-to-store-the-filesinstallation-on-a-separate-drive
+#   nextcloud_aio_mastercontainer:
+#     name: nextcloud_aio_mastercontainer # This line is not allowed to be changed as otherwise the built-in backup solution will not work
