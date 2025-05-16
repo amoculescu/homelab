@@ -2,9 +2,11 @@ secrets:
   cf_api_token:
     file: ./traefik/cf_api_token.txt
   woodpecker_secrets:
-    file: ./woodpecker/secrets.txt
+    file: ./woodpecker-server/secrets.txt
   woodpecker_client:
-    file: ./woodpecker/client.txt
+    file: ./woodpecker-server/client.txt
+  woodpecker_agent_pve_token:
+    file: ./woodpecker-agent/pve_agent_token.txt
   git_db_password:
     file: ./git/db_password.txt
     
@@ -247,6 +249,7 @@ services:
     networks:
       - git
       - services
+      - public
     volumes:
       - ./git:/data:z
       - /etc/timezone:/etc/timezone:ro
@@ -282,19 +285,21 @@ services:
       - ./postgres:/var/lib/postgresql/data:z
 
   woodpecker-server:
-    image: woodpeckerci/woodpecker-server:latest
+    image: woodpeckerci/woodpecker-server:v3.0.1-alpine
     container_name: woodpecker
     expose:
       - "8000"
+      - "9000"
     secrets:
       - woodpecker_secrets
       - woodpecker_client
     volumes:
-      - ./woodpecker:/var/lib/woodpecker/:z
+      - ./woodpecker-server:/var/lib/woodpecker/:z
     networks:
       - git
       - services
       - public
+      - ci
     environment:
       - WOODPECKER_OPEN=true
       - WOODPECKER_HOST=https://ci.moculescu.de
@@ -305,9 +310,27 @@ services:
       - WOODPECKER_FORGEJO_URL=https://git.moculescu.de
       - WOODPECKER_FORGEJO_CLIENT_FILE=/run/secrets/woodpecker_client
       - WOODPECKER_FORGEJO_SECRET_FILE=/run/secrets/woodpecker_secrets
+      - WOODPECKER_ADMIN=LocalAdmin
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.ci.loadbalancer.server.port=8000"
       - "traefik.http.routers.ci.entrypoints=https"
       - "traefik.http.routers.ci.rule=Host(`ci.moculescu.de`)"
       - "traefik.http.routers.ci.tls=true"
+      
+  woodpecker-agent:
+    image: woodpeckerci/woodpecker-agent:v3.0.1-alpine
+    command: agent
+    restart: always
+    depends_on:
+      - woodpecker-server
+    secrets:
+      - woodpecker_agent_pve_token  
+    volumes:
+      - ./woodpecker-agent:/etc/woodpecker
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - ci
+    environment:
+      - WOODPECKER_SERVER=woodpecker-server:9000
+      - WOODPECKER_AGENT_SECRET_FILE=/run/secrets/woodpecker_agent_pve_token

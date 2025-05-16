@@ -3,11 +3,12 @@ pihole/etc-*/**
 gitea/**
 teamcity/**
 git/**
-woodpecker/**
+woodpecker-server/**
 uptime_kuma/uptime-kuma-data/**
 traefik/acme.json
 traefik/cf_api_token.txt
 portainer/data/**
+woodpecker-agent/pve_agent_token.txt
 .env
 **/*.swp
 **log**
