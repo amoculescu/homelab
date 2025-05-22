@@ -12,7 +12,7 @@
 #        Authorization: drop
 #        Content-Type: keep
 log: 
-  level: "ERROR" 
+  level: "DEBUG" 
 api:
   insecure: true
   dashboard: true
@@ -98,7 +98,7 @@ http:
     pve:
       loadbalancer:
         servers:
-          - url: "https://192.168.178.4:8006"
+          - url: "https://10.0.0.1:8006"
         passHostHeader: true
         serversTransport: "pve"
     reactive-resume:

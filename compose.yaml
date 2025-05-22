@@ -64,6 +64,7 @@ services:
     expose:
       - '3000'
     environment:
+      - HOMEPAGE_ALLOWED_HOSTS=hp.moculescu.de
       - PUID=1000 
       - PGID=1000
     volumes:
