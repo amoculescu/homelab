@@ -8,7 +8,10 @@ uptime_kuma/uptime-kuma-data/**
 traefik/acme.json
 traefik/cf_api_token.txt
 portainer/data/**
+rustdesk/**
+actual-budget-data/**
 woodpecker-agent/pve_agent_token.txt
 .env
+cloudflare-tunnel/token.txt
 **/*.swp
 **log**

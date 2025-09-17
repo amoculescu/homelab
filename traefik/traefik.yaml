@@ -62,69 +62,16 @@ http:
         # - https-redirectscheme
       tls: {}
       service: pve
-    reactive-resume:
-      entryPoints:
-        - https
-      rule: "Host(`resume.moculescu.de`)"
-      middlewares:
-        - default-headers
-        - https-redirectscheme
-      tls: {}
-      service: reactive-resume
-    pihole:
-      entryPoints:
-        - https
-      rule: "Host(`pihole.moculescu.de`)"
-      middlewares:
-        - default-headers
-        - https-redirectscheme
-        - pihole-redirect
-        - pihole-addprefix
-      tls: {}
-      service: pihole
-    pihole-alt:
-      entryPoints:
-        - https
-      rule: "Host(`pihole2.moculescu.de`)"
-      middlewares:
-        - default-headers
-        - https-redirectscheme
-        - pihole-redirect
-        - pihole-addprefix
-      tls: {}
-      service: pihole-alt
       
   services:
     pve:
       loadbalancer:
         servers:
-          - url: "https://10.0.0.1:8006"
+          - url: "https://10.0.0.2:8006"
         passHostHeader: true
         serversTransport: "pve"
-    reactive-resume:
-      loadbalancer:
-        servers:
-          - url: "http://192.168.178.50:3000"
-        passHostHeader: true
-        serversTransport: "pve"
-    pihole:
-      loadbalancer:
-        servers:
-          - url: "http://192.168.178.2:80"
-        passHostHeader: true
-    pihole-alt:
-      loadbalancer:
-        servers:
-          - url: "http://192.168.178.3:80"
-        passHostHeader: true
         
   middlewares:
-    pihole-addprefix:
-      addPrefix:
-        prefix: "/admin"
-    pihole-redirect:
-      redirectRegex:
-        regex: "/admin/$"
     https-redirectscheme:
       redirectScheme:
         scheme: https
