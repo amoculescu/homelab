@@ -1,0 +1,48 @@
+#!/bin/bash
+# combustion: script
+
+# hostname + basic identity
+echo homelab > /etc/hostname
+echo "127.0.1.1 homelab" >> /etc/hosts
+
+# your SSH key (so you can log in — without this you're locked out!)
+mkdir -p /root/.ssh
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDCCUybcDCCMaTboE0BaJtkObWu9FEfeukgbFsa+b9mwBCDwX3L8W9p8BhtQ+MQ2wmRDITzMegDiqDCu+kIgcMrI9gWuV/bqYljzD7MwQihUyPhgs6Thgrzz8uAcLvBguOhTn2FmPUzTfU6pYJ/ArdQLxPUfdlge+K4oStm16UXiaB70cR1g9yZNIcT7v2ybtxgHsPP2aI4eIa1yFZEqCq5w57TJwBIPsv9D70ebCWHFhs2rh3kNPQoi+VzceC/OD9A2auoV2bC4QhfHQhhKxdD9l1WsGxnmDCQSr08XlEX3f+LnpF66qj8RP/EbETn7d2kB8c/JqVAhEB3i69WQYdwyxujXPe7q/3d+dm5LDijKHxUmH2Lyu9tYG3k8rvKMUxwwDj5V89xiEmfPmtZLqi+VRwXxIEfbdZ38ios4DHbYyeh7oGoQQZZ9RwkJ6OnpSVzipvjhOhl8OVNnmh7oO7Mfn8XZ6h0tnFKq+2R3St/ts6l/epuM6sOH9alY7bwnNE= andre@WSWin" >> /root/.ssh/authorized_keys
+chmod 700 /root/.ssh
+chmod 600 /root/.ssh/authorized_keys
+
+# data disk: format if needed, mount at /srv
+DEVICE=/dev/sdb
+
+# 1. Device must exist at all
+if [ ! -b "$DEVICE" ]; then
+    echo "COMBUSTION: $DEVICE not found — refusing to touch disks" >&2
+    exit 1
+fi
+
+# 2. Must not be the disk we booted from (belt-and-braces)
+ROOTSRC=$(findmnt -no SOURCE --real /)
+ROOTSRC=${ROOTSRC%%\[*}
+ROOTDISK=$(lsblk -no PKNAME "$ROOTSRC")
+if [ "${DEVICE#/dev/}" = "$ROOTDISK" ]; then
+    echo "COMBUSTION: $DEVICE looks like the root disk — aborting" >&2
+    exit 1
+fi
+
+# 3. Must be the ~64GiB data disk
+SIZE_GB=$(lsblk -bn --output SIZE "$DEVICE" | awk '{printf "%d", $1/1024/1024/1024}')
+if [ "$SIZE_GB" -lt 50 ]; then
+    echo "COMBUSTION: $DEVICE is ${SIZE_GB}GB, expected ~64GB — aborting" >&2
+    exit 1
+fi
+
+# ...only now, format/mount:
+if ! blkid "$DEVICE"; then
+    mkfs.ext4 -L srvdata "$DEVICE"
+fi
+mkdir -p /srv
+UUID=$(blkid -s UUID -o value "$DEVICE")
+echo "UUID=$UUID /srv ext4 defaults 0 2" >> /etc/fstab
+
+# enable what you need
+systemctl enable podman.socket
