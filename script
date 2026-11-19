@@ -11,7 +11,7 @@ echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDCCUybcDCCMaTboE0BaJtkObWu9FEfeukgbF
 chmod 700 /root/.ssh
 chmod 600 /root/.ssh/authorized_keys
 
-# data disk: format if needed, mount at /srv
+# data disk: format if needed, mount at /data
 DEVICE=/dev/sdb
 
 # 1. Device must exist at all
@@ -40,9 +40,9 @@ fi
 if ! blkid "$DEVICE"; then
     mkfs.ext4 -L srvdata "$DEVICE"
 fi
-mkdir -p /srv
+mkdir -p /data
 UUID=$(blkid -s UUID -o value "$DEVICE")
-echo "UUID=$UUID /srv ext4 defaults 0 2" >> /etc/fstab
+echo "UUID=$UUID /data ext4 defaults 0 2" >> /etc/fstab
 
 # enable what you need
 systemctl enable podman.socket
