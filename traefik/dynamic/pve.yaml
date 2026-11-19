@@ -1,0 +1,17 @@
+http:
+  routers:
+    pve:
+      rule: "Host(`pve.moculescu.de`)"
+      service: pve
+      middlewares:
+        - default-headers
+  services:
+    pve:
+      loadBalancer:
+        servers:
+          - url: "https://10.0.0.2:8006"
+        passHostHeader: true
+        serversTransport: pve-transport
+  serversTransports:
+    pve-transport:
+      insecureSkipVerify: true

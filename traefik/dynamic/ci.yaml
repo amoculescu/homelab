@@ -1,0 +1,12 @@
+http:
+  routers:
+    ci:
+      rule: "Host(`ci.moculescu.de`)"
+      service: ci
+      middlewares:
+        - default-headers
+  services:
+    ci:
+      loadBalancer:
+        servers:
+          - url: "http://woodpecker-server:8000"

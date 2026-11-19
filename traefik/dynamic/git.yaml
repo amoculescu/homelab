@@ -1,0 +1,13 @@
+http:
+  routers:
+    git:
+      rule: "Host(`git.moculescu.de`)"
+      service: git
+      middlewares:
+        - default-headers
+  services:
+    git:
+      loadBalancer:
+        servers:
+          - url: "http://git:3000"
+

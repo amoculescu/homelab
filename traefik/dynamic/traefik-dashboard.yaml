@@ -1,0 +1,13 @@
+http:
+  routers:
+    traefik-dashboard:
+      rule: "Host(`traefik.moculescu.de`)"
+      service: api@internal
+      middlewares:
+        - dashboard-auth
+        - default-headers
+  middlewares:
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "admin:$2y$05$XpQj4rDSyloyAHD1VhJztOvDKmfxnbfBnhJMb1Ul1YVX3Dmh7tOxW"

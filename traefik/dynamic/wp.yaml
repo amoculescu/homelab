@@ -1,0 +1,12 @@
+http:
+  routers:
+    wp:
+      rule: "Host(`moculescu.de`)"
+      service: wp
+      middlewares:
+        - default-headers
+  services:
+    wp:
+      loadBalancer:
+        servers:
+          - url: "http://nginx:80"

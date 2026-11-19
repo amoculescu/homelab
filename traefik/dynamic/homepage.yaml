@@ -1,0 +1,12 @@
+http:
+  routers:
+    homepage:
+      rule: "Host(`hp.moculescu.de`)"
+      service: homepage
+      middlewares:
+        - default-headers
+  services:
+    homepage:
+      loadBalancer:
+        servers:
+          - url: "http://homepage:3000"
