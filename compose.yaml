@@ -1,15 +1,6 @@
 secrets:
   cf_api_token:
     file: ./traefik/cf_api_token.txt
-  woodpecker_secrets:
-    file: ./woodpecker-server/secrets.txt
-  woodpecker_client:
-    file: ./woodpecker-server/client.txt
-  woodpecker_agent_pve_token:
-    file: ./woodpecker-agent/pve_agent_token.txt
-  git_db_password:
-    file: ./git/db_password.txt
-
 
 networks:
   public:
@@ -18,236 +9,124 @@ networks:
   proxy:
     driver: bridge
     internal: true
-    name: proxy
   services:
     driver: bridge
     internal: true
-    name: services
   loki-net:
     driver: bridge
     internal: true
-    name: loki-net
   git:
     driver: bridge
     internal: true
-    name: git
   ci:
     driver: bridge
     internal: true
-    name: ci
 
 services:
-  dockerproxy:
-    image: ghcr.io/tecnativa/docker-socket-proxy:latest
-    container_name: dockerproxy
-    networks:
-      - proxy
-    environment:
-      - CONTAINERS=1
-      - SERVICES=1 
-      - TASKS=1
-      - POST=1
-      - IMAGES=1
-      - INFO=1
-      - NETWORKS=1
-      - VOLUMES=1
-    ports: 
-      - '2375:2375'
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:z
-    restart: always
-
-  homepage:
-    image: ghcr.io/gethomepage/homepage:latest
-    container_name: homepage
-    networks:
-      - services
-    expose:
-      - '3000'
-    environment:
-      - HOMEPAGE_ALLOWED_HOSTS=hp.moculescu.de
-      - PUID=1000 
-      - PGID=1000
-    volumes:
-      - ./homepage/config:/app/config:z
-      - ./homepage/pictures:/app/public/images:z
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
-      - "traefik.http.routers.homepage.entrypoints=https"
-      - "traefik.http.routers.homepage.rule=Host(`hp.moculescu.de`)"
-      - "traefik.http.routers.homepage.tls=true"
-    restart: always
-
-  uptime-kuma:
-    image: louislam/uptime-kuma:1
-    container_name: kuma
-    environment:
-      - PUID=1000 
-      - PGID=1000
-    networks:
-      - public
-      - services
-      - proxy
-    volumes:
-      - ./uptime_kuma/uptime-kuma-data:/app/data:z
-    expose:
-      - 3001
-    restart: always
-    labels:
-      - traefik.enable=true
-      - traefik.http.services.kuma.loadbalancer.server.port=3001
-      - traefik.http.routers.kuma.entrypoints=https
-      - 'traefik.http.routers.kuma.rule=Host(`kuma.moculescu.de`)'
-      - "traefik.http.routers.kuma.tls=true"
-
-  
-  nginx:
-    container_name: nginx
-    image: nginx:1-alpine
-    environment:
-      - PUID=1000 
-      - PGID=1000
-    networks: 
-      - services
-    expose:
-      - "80"
-    restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.wp.loadbalancer.server.port=80"
-      - "traefik.http.routers.wp.entrypoints=https"
-      - "traefik.http.routers.wp.rule=Host(`moculescu.de`)"
-      - "traefik.http.routers.wp.tls=true"
-
-
-  reverse-proxy:
+  traefik:
     container_name: traefik
-    image: traefik:v3.5.1
-    depends_on:
-      - dockerproxy
+    image: traefik:v3.5
+    restart: unless-stopped
     networks:
       - proxy
       - public
       - services
     ports:
       - "80:80"
-      - "8080:8080"
       - "443:443"
     environment:
       - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_api_token
-      - PUID=1000 
-      - PGID=1000
     secrets:
       - cf_api_token
     volumes:
-      - ./traefik/traefik.yaml:/traefik.yaml:z
-      - ./traefik/access.log:/var/log/traefik/access.log:z
+      - ./traefik/traefik.yaml:/etc/traefik/traefik.yaml:z
+      - ./traefik/dynamic:/etc/traefik/dynamic:z
       - ./traefik/acme.json:/acme.json:z
-    restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
-      - "traefik.http.routers.traefik.entrypoints=http"
-      - "traefik.http.routers.traefik.rule=Host(`traefik.moculescu.de`)"
-      - "traefik.http.routers.traefik.middlewares=traefik-https"
-      - "traefik.http.middlewares.traefik-https.redirectscheme.scheme=https"
-      - "traefik.http.routers.traefik-secure.entrypoints=https"
-      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.moculescu.de`)"
-      - "traefik.http.routers.traefik-secure.tls=true"
-      - "traefik.http.routers.traefik-secure.tls.certresolver=cloudflare"
-      - "traefik.http.routers.traefik-secure.tls.domains[0].main=moculescu.de"
-      - "traefik.http.routers.traefik-secure.tls.domains[0].sans=*.moculescu.de"
 
+  homepage:
+    container_name: homepage
+    image: ghcr.io/gethomepage/homepage:latest
+    restart: unless-stopped
+    networks:
+      - services
+    expose:
+      - "3000"
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=hp.moculescu.de
+    volumes:
+      - ./homepage/config:/app/config:z
+      - ./homepage/pictures:/app/public/images:z
+
+  kuma:
+    container_name: kuma
+    image: louislam/uptime-kuma:2
+    restart: unless-stopped
+    networks:
+      - services
+    volumes:
+      - ./uptime_kuma/uptime-kuma-data:/app/data:z
+
+  nginx:
+    container_name: nginx
+    image: nginx:1-alpine
+    restart: unless-stopped
+    networks:
+      - services
+    expose:
+      - "80"
+    volumes:
+      - ./nginx/html:/usr/share/nginx/html:z
 
   loki:
     container_name: loki
     image: grafana/loki:latest
-    environment:
-      - PUID=1000 
-      - PGID=1000
-    ports:
-       - "3100:3100"
+    restart: unless-stopped
     networks:
-     - loki-net
+      - loki-net
     volumes:
       - ./grafana/loki-config.yaml:/etc/loki/loki-config.yaml:z
-    restart: always
+      - ./grafana/loki-data:/loki:z
 
   promtail:
     container_name: promtail
     image: grafana/promtail:latest
-    environment:
-      - PUID=1000 
-      - PGID=1000
-    volumes:
-      - ./grafana/promtail-config.yaml:/etc/promtail/promtail-config.yaml:z
+    restart: unless-stopped
     networks:
       - loki-net
     depends_on:
       - loki
-    restart: always
+    volumes:
+      - ./grafana/promtail-config.yaml:/etc/promtail/promtail-config.yaml:z
 
   grafana:
     container_name: grafana
     image: grafana/grafana:latest
-    environment:
-      - PUID=1000 
-      - PGID=1000
-    env_file: .env
-    expose:
-      - "3002"
+    restart: unless-stopped
     networks:
       - loki-net
       - services
     depends_on:
       - loki
+    env_file: .env
     volumes:
-      - "./grafana/grafana.ini:/etc/grafana/grafana.ini:z"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3002"
-      - "traefik.http.routers.grafana.entrypoints=https"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.moculescu.de`)"
-      - "traefik.http.routers.grafana.tls=true"
-    restart: always
-
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: portainer
-    environment:
-      - PUID=1000 
-      - PGID=1000
-    depends_on:
-      - dockerproxy
-    command: -H tcp://dockerproxy:2375
-    networks:
-      - proxy
-    expose:
-      - 9000
-    volumes:
-      - ./portainer/data:/data:z
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-      - "traefik.http.routers.portainer.entrypoints=https"
-      - "traefik.http.routers.portainer.rule=Host(`portainer.moculescu.de`)"
-      - "traefik.http.routers.portainer.tls=true"
-    restart: always
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini:z
+      - ./grafana/data:/var/lib/grafana:z
 
   git:
     container_name: git
     image: codeberg.org/forgejo/forgejo:10
-    secrets:
-      - git_db_password
+    restart: unless-stopped
+    depends_on:
+      - git-db
     environment:
       - USER_UID=1001
       - USER_GID=1001
+      - FORGEJO__webhook__ALLOWED_HOST_LIST=ci.moculescu.de  
       - FORGEJO__database__DB_TYPE=postgres
       - FORGEJO__database__HOST=git-db:5432
       - FORGEJO__database__NAME=forgejo
       - FORGEJO__database__USER=forgejo
-      - FORGEJO__database__PASSWD__FILE=/run/secrets/git_db_password
+      - FORGEJO__database__PASSWD=${GIT_DB_PASSWORD}
     networks:
       - git
       - services
@@ -256,30 +135,18 @@ services:
       - ./git:/data:z
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-      - /home/git/.ssh/:/data/git/.ssh:z
     expose:
-      - 3000
+      - "3000"
     ports:
-      - '127.0.0.1:2222:22'
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.git.loadbalancer.server.port=3000"
-      - "traefik.http.routers.git.entrypoints=https"
-      - "traefik.http.routers.git.rule=Host(`git.moculescu.de`)"
-      - "traefik.http.routers.git.tls=true"
-    restart: always
-    depends_on:
-      - git-db
+      - "127.0.0.1:2222:22"     # SSH for git, loopback-only; expose via VPS later if wanted
 
   git-db:
-    image: docker.io/library/postgres:14
     container_name: git-db
-    restart: always
-    secrets:
-      - git_db_password
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=forgejo
-      - POSTGRES_PASSWORD_FILE=/run/secrets/git_db_password
+      - POSTGRES_PASSWORD=${GIT_DB_PASSWORD}
       - POSTGRES_DB=forgejo
     networks:
       - git
@@ -287,107 +154,86 @@ services:
       - ./postgres:/var/lib/postgresql/data:z
 
   woodpecker-server:
-    image: woodpeckerci/woodpecker-server:v3.6.0-alpine
     container_name: woodpecker
-    expose:
-      - "8000"
-      - "9000"
-    secrets:
-      - woodpecker_secrets
-      - woodpecker_client
+    image: woodpeckerci/woodpecker-server:v3
+    restart: unless-stopped
+    depends_on:
+      - git
+    environment:
+      - WOODPECKER_OPEN=false
+      - WOODPECKER_HOST=https://ci.moculescu.de
+      - WOODPECKER_FORGEJO=true
+      - WOODPECKER_FORGEJO_URL=https://git.moculescu.de
+      - WOODPECKER_ADMIN=amoculescu
+      - WOODPECKER_GRPC_SECRET=${WOODPECKER_AGENT_SECRET}
+      - WOODPECKER_FORGEJO_CLIENT=24b9ca89-fad5-4955-a87a-58d2b5e71b1a
+      - WOODPECKER_FORGEJO_SECRET=${WOODPECKER_FORGEJO_CLIENT_SECRET}
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET}  
     volumes:
-      - ./woodpecker-server:/var/lib/woodpecker/:z
+      - ./woodpecker-server:/var/lib/woodpecker:z
     networks:
       - git
       - services
-      - public
       - ci
-    environment:
-      - WOODPECKER_OPEN=true
-      - WOODPECKER_HOST=https://ci.moculescu.de
-      - WOODPECKER_LOG_FILE=stdout
-      - WOODPECKER_LOG_LEVEL=debug
-      - WOODPECKER_BACKEND_DOCKER_NETWORK=git
-      - WOODPECKER_FORGEJO=true
-      - WOODPECKER_FORGEJO_URL=https://git.moculescu.de
-      - WOODPECKER_FORGEJO_CLIENT_FILE=/run/secrets/woodpecker_client
-      - WOODPECKER_FORGEJO_SECRET_FILE=/run/secrets/woodpecker_secrets
-      - WOODPECKER_ADMIN=LocalAdmin
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.ci.loadbalancer.server.port=8000"
-      - "traefik.http.routers.ci.entrypoints=https"
-      - "traefik.http.routers.ci.rule=Host(`ci.moculescu.de`)"
-      - "traefik.http.routers.ci.tls=true"
-      
+      - public
+
   woodpecker-agent:
-    image: woodpeckerci/woodpecker-agent:v3.6.0-alpine
-    command: agent
-    restart: always
+    container_name: woodpecker-agent
+    image: woodpeckerci/woodpecker-agent:v3
+    restart: unless-stopped
+    user: "0:0"
+    security_opt:
+      - label=disable
     depends_on:
       - woodpecker-server
-    secrets:
-      - woodpecker_agent_pve_token  
-    volumes:
-      - ./woodpecker-agent:/etc/woodpecker
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - ci
+    command: agent
     environment:
       - WOODPECKER_SERVER=woodpecker-server:9000
-      - WOODPECKER_AGENT_SECRET_FILE=/run/secrets/woodpecker_agent_pve_token
+      - WOODPECKER_BACKEND_DOCKER_NETWORK=homelab_git
+      - WOODPECKER_GRPC_SECRET=${WOODPECKER_AGENT_SECRET}
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET}
+    volumes:
+      # Woodpecker's docker backend speaks the docker API; the rootful podman
+      # socket (podman.socket) is docker-API-compatible. If pipelines fail to
+      # spawn, revisit — fallback is the dedicated CI VM plan.
+      - /run/podman/podman.sock:/var/run/docker.sock
+      - ./woodpecker-agent-config:/etc/woodpecker:z
+    networks:
+      - ci
 
   hbbs:
     container_name: hbbs
     image: rustdesk/rustdesk-server:latest
-    #networks:
-      #- public
-    network_mode: "host"
-    environment:
-      - ALWAYS_USE_RELAY=Y
+    restart: unless-stopped
+    network_mode: host
     command: hbbs
-    ports:
-      - "21116:21116"
-      - "21115:21115"
     volumes:
       - ./rustdesk:/root:z
     depends_on:
       - hbbr
-    restart: unless-stopped
 
   hbbr:
     container_name: hbbr
     image: rustdesk/rustdesk-server:latest
-    network_mode: "host"
-    #networks:
-      #- public
+    restart: unless-stopped
+    network_mode: host
     command: hbbr
-    ports:
-      - "21117:21117"
     volumes:
       - ./rustdesk:/root:z
-    restart: unless-stopped
 
   actual_budget:
-    image: ghcr.io/actualbudget/actual:latest
     container_name: actual_budget
+    image: ghcr.io/actualbudget/actual:latest
+    restart: unless-stopped
     networks:
       - services
     expose:
-      - '5006'
+      - "5006"
     healthcheck:
-      # Enable health check for the instance
-      test: ['CMD-SHELL', 'node src/scripts/health-check.js']
+      test: ["CMD-SHELL", "node src/scripts/health-check.js"]
       interval: 60s
       timeout: 10s
       retries: 3
       start_period: 20s
     volumes:
-      - ./actual-budget-data:/data:z
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.budget.loadbalancer.server.port=5006"
-      - "traefik.http.routers.budget.entrypoints=https"
-      - "traefik.http.routers.budget.rule=Host(`budget.moculescu.de`)"
-      - "traefik.http.routers.budget.tls=true"
-    restart: unless-stopped
+      - ./actual-budget-data:/da

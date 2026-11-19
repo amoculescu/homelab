@@ -1,0 +1,12 @@
+http:
+  routers:
+    kuma:
+      rule: "Host(`kuma.moculescu.de`)"
+      service: kuma
+      middlewares:
+        - default-headers
+  services:
+    kuma:
+      loadBalancer:
+        servers:
+          - url: "http://kuma:3001"

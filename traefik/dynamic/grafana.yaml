@@ -1,0 +1,12 @@
+http:
+  routers:
+    grafana:
+      rule: "Host(`grafana.moculescu.de`)"
+      service: grafana
+      middlewares:
+        - default-headers
+  services:
+    grafana:
+      loadBalancer:
+        servers:
+          - url: "http://grafana:3002"

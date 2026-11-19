@@ -11,7 +11,9 @@ portainer/data/**
 rustdesk/**
 actual-budget-data/**
 woodpecker-agent/pve_agent_token.txt
+woodpecker-agent-config/agent.conf
 .env
 cloudflare-tunnel/token.txt
 **/*.swp
 **log**
+postgres/

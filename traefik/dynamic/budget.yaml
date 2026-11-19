@@ -1,0 +1,12 @@
+http:
+  routers:
+    budget:
+      rule: "Host(`budget.moculescu.de`)"
+      service: budget
+      middlewares:
+        - default-headers
+  services:
+    budget:
+      loadBalancer:
+        servers:
+          - url: "http://actual_budget:5006"
